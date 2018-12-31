@@ -81,6 +81,17 @@ oc create -f $working_dir/jmeter_master_configmap.yaml
 
 oc create -f $working_dir/jmeter_master_deploymentconfig.yaml
 
+count=0
+while [ $count -lt 60 ]; do
+    state=`oc get pod | grep "jmeter" |grep -v "depoy" |awk '{if($3!="Running"){print "Not-Ready"}}'`
+    #state=`oc get pod | grep "jmeter" |grep -v "depoy" |awk '{print $3}'`
+    if [ "$state" == "" ];then
+        break
+    fi
+    echo "waiting for jmeter cluster ready..."
+    sleep 3
+done
+
 <<COMMENT
 echo "Creating Influxdb and the service"
 
