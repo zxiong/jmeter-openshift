@@ -1,0 +1,40 @@
+pipeline {
+  agent {
+    kubernetes {
+      label "jenkins-slave-${UUID.randomUUID().toString()}"
+      defaultContainer 'jnlp'
+      yaml """
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        labels:
+          app: "my-jenkins-slave"
+      spec:
+        serviceAccountName: default
+        containers:
+        - name: jnlp
+          image: docker.io/openshift/jenkins-slave-base-centos7:latest
+          tty: true
+          resources:
+            requests:
+              memory: 368Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 300m
+      """
+    }
+  }
+  stages {
+    stage('Build') {
+      steps {
+        sh "oc login ${OPENSHIFT_URL} -u ${USER} -p ${PASSWORD} -n ${PROJECT} --insecure-skip-tls-verify; oc get pods"
+        script {
+            def WORKSPACE = pwd()
+            def BUILD_NUMBER = "${currentBuild.number}"
+            performanceTestBuilder excludedTransactionPattern: '', fallbackTimezone: 'UTC', keepBuilds: 5, perfchartsCommand: "sh openshift/gen_report.sh $WORKSPACE $BUILD_NUMBER", performanceTesters: [[$class: 'JmeterPerformanceTester', disabled: false, jmeterArgs: '', jmeterCommand: "sh $WORKSPACE/openshift/run_test.sh $WORKSPACE $BUILD_NUMBER", jmxExcludingPattern: '', jmxIncludingPattern: 'load/Login.jmx', noAutoJTL: false]], reportTemplate: 'perf-baseline', resultDir: 'perf-output/'
+        }
+      }
+    }
+  }
+}
