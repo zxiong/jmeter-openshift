@@ -47,13 +47,13 @@ oc process -f $working_dir/jmeter_master_cm_template.yaml -p FILTER=$filter | oc
 oc process -f $working_dir/jmeter_master_dc_template.yaml -p FILTER=$filter | oc create -f -
 
 count=0
-while [ $count -lt 60 ]; do
-    state=`oc get pod | grep -E "jmeter-master-$filter|jmeter-slaves-$filter" |grep -v "depoy" |awk '{if($3!="Running"){print "Not-Ready"}}'`
+while [ $count -lt 60 ]; do 
+    sleep 3
+    state=`oc get pod | grep -E "jmeter-master-$filter|jmeter-slaves-$filter" |grep "deploy"`
     if [ "$state" == "" ];then
         break
     fi
     echo "waiting for JMeter cluster ready..."
-    sleep 3
 done
 
 echo "Printout Of the $tenant Objects"
