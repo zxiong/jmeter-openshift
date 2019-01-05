@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-#Create multiple Jmeter namespaces on an existing kuberntes cluster
-#Started On January 23, 2018
+
+if [ $# -lt 2 ]; then
+    echo "Input parameters are not enough, please check them"
+    exit 1
+fi
 
 working_dir=`pwd`
 
@@ -17,100 +20,46 @@ oc version
 
 echo "Current list of projects on the OpenShift cluster:"
 
-tenant=$1
-
-<<COMMENT
-echo
-
-oc get project | grep -v NAME | awk '{print $1}'
-
-echo
-
-echo "Enter the name of the new project unique name, this will be used to create the namespace"
-read tenant
-echo
-
-#Check If namespace exists
-
-oc get project $tenant > /dev/null 2>&1
-
-if [ $? -eq 0 ]
-then
-  echo "Project $tenant already exists, please select a unique name"
-  echo "Current list of projects on the OpenShift cluster"
-  sleep 2
-
- oc get project | grep -v NAME | awk '{print $1}'
-  exit 1
-fi
-
-echo
-echo "Creating project: $tenant"
-
-oc new-project $tenant --description="jmeter cluster for loadtesting" --display-name="loadtesting"
-
-COMMENT
-
-echo "Project $tenant has been created"
+filter=$1
+slave_num=$2
+tenant=$3
 
 oc project $tenant
 
 echo
 
-echo "Creating Jmeter slave nodes"
-
-# nodes=`kubectl get no | egrep -v "master|NAME" | wc -l`
-
-# echo
-
-# echo "Number of worker nodes on this cluster is " $nodes
+echo "Creating JMeter slave nodes"
 
 echo
 
-#echo "Creating $nodes Jmeter slave replicas and service"
+#oc create -f $working_dir/jmeter_slaves_deploymentconfig.yaml
+oc process -f $working_dir/jmeter_slaves_dc_template.yaml -p FILTER=$filter NUMBER=$slave_num| oc create -f -
 
-echo
+#oc create -f $working_dir/jmeter_slaves_svc.yaml
+oc process -f $working_dir/jmeter_slaves_svc_template.yaml -p FILTER=$filter | oc create -f -
 
-oc create -f $working_dir/jmeter_slaves_deploymentconfig.yaml
+echo "Creating JMeter Master"
 
-oc create -f $working_dir/jmeter_slaves_svc.yaml
+#oc create -f $working_dir/jmeter_master_configmap.yaml
+oc process -f $working_dir/jmeter_master_cm_template.yaml -p FILTER=$filter | oc create -f -
 
-echo "Creating Jmeter Master"
-
-oc create -f $working_dir/jmeter_master_configmap.yaml
-
-oc create -f $working_dir/jmeter_master_deploymentconfig.yaml
+#oc create -f $working_dir/jmeter_master_deploymentconfig.yaml
+oc process -f $working_dir/jmeter_master_dc_template.yaml -p FILTER=$filter | oc create -f -
 
 count=0
 while [ $count -lt 60 ]; do
-    state=`oc get pod | grep "jmeter" |grep -v "depoy" |awk '{if($3!="Running"){print "Not-Ready"}}'`
-    #state=`oc get pod | grep "jmeter" |grep -v "depoy" |awk '{print $3}'`
+    state=`oc get pod | grep -E "jmeter-master-$filter|jmeter-slaves-$filter" |grep -v "depoy" |awk '{if($3!="Running"){print "Not-Ready"}}'`
     if [ "$state" == "" ];then
         break
     fi
-    echo "waiting for jmeter cluster ready..."
+    echo "waiting for JMeter cluster ready..."
     sleep 3
 done
 
-<<COMMENT
-echo "Creating Influxdb and the service"
-
-oc create -f $working_dir/jmeter_influxdb_configmap.yaml
-
-oc create -f $working_dir/jmeter_influxdb_openshift_deploymentconfig_ephemeral.yaml
-
-oc create -f $working_dir/jmeter_influxdb_svc.yaml
-
-echo "Creating Grafana Deployment"
-
-oc create -f $working_dir/jmeter_grafana_deploy.yaml
-
-oc create -f $working_dir/jmeter_grafana_svc.yaml
-COMMENT
 echo "Printout Of the $tenant Objects"
 
 echo
 
 oc get all -o wide
 
-echo project= $tenant > $working_dir/tenant_export
+#echo project= $tenant > $working_dir/tenant_export

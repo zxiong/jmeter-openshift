@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: jmeter-configmap-template
+  annotations:
+    description: "Description"
+    iconClass: "jmeter"
+    tags: "jmeter"
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: jmeter-slaves-svc-${FILTER}
+    labels:
+      jmeter_mode: slaves-${FILTER}
+  spec:
+    clusterIP: None
+    ports:
+      - port: 1099
+        name: first
+        targetPort: 1099
+      - port: 50000
+        name: second
+        targetPort: 50000
+    selector:
+      jmeter_mode: slaves-${FILTER}
+parameters:
+  - name: FILTER
+    description: "use to filter out them for removing after test finished"
+    value: "100"
+labels:
+  jmeter: jmeter-master

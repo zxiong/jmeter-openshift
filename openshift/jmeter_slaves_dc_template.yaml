@@ -14,9 +14,9 @@ objects:
       jmeter_mode: slaves-${FILTER}
     name: jmeter-slaves-${FILTER}
   spec:
-    replicas: 3
+    replicas: ${NUMBER} 
     selector:
-      jmeter_mode: slaves
+      jmeter_mode: slaves-${FILTER}
     strategy:
       activeDeadlineSeconds: 21600
       resources: {}
@@ -31,7 +31,7 @@ objects:
       metadata:
         creationTimestamp: null
         labels:
-          jmeter_mode: slaves
+          jmeter_mode: slaves-${FILTER}
       spec:
         containers:
         - image: cloudssky/jmeter-slave
@@ -50,7 +50,10 @@ objects:
     test: false
 parameters:
   - name: FILTER
-    description: "use to filter them for removing after test finished"
+    description: "use to filter out them for removing after test finished"
     value: "100"
+  - name: NUMBER 
+    description: "the number of JMeter slave instances will be launched"
+    value: "2"
 labels:
   jmeter: jmeter-slaves
