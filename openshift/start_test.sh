@@ -10,8 +10,12 @@ fi
 
 jmeter_script=$1
 jmeter_script_dir=$2
-#jmeter_script_dir="$(dirname $jmeter_script)"
 filter=$3
+extra_param=""
+
+if [ $# -eq 4 ]; then
+    extra_param="$4"
+fi
 
 echo "$1,$2,$3"
 
@@ -30,7 +34,7 @@ for slave_pod in $slave_pods; do
 done
 
 ## Echo Starting Jmeter load test
-oc exec -ti $master_pod -- /bin/bash /jmeter/load_test $jmeter_script
+oc exec -ti $master_pod -- /bin/bash /jmeter/load_test "$jmeter_script" "$extra_param"
 
 #copy result out
 oc rsync $master_pod:/tmp/test_result_$filter.jtl /tmp/
